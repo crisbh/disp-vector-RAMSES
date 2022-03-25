@@ -1118,6 +1118,9 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
         end do
         do j=1,np
            if(ok(j))then
+              ! This needs to be modified to assign the density to the cells. 
+              ! Check whether we need density perturbation or density (and s_0).
+              ! Be careful not to accumulate values.
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do

@@ -230,6 +230,9 @@ recursive subroutine amr_step(ilevel,icount)
      endif
 
      ! Compute gravitational potential
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     ! Here this is used to calculate the displacement field potential
+     ! Do it for t_ini
      if(ilevel>levelmin)then
         if(ilevel .ge. cg_levelmin) then
            call phi_fine_cg(ilevel,icount)
@@ -244,6 +247,24 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Compute gravitational acceleration
      call force_fine(ilevel,icount)
+
+     ! Do it for t_ini + dt
+     if(ilevel>levelmin)then
+        if(ilevel .ge. cg_levelmin) then
+           call phi_fine_cg(ilevel,icount)
+        else
+           call multigrid_fine(ilevel,icount)
+        end if
+     else
+        call multigrid_fine(levelmin,icount)
+     end if
+     !when there is no old potential...
+     if (nstep==0)call save_phi_old(ilevel)
+
+     ! Compute gravitational acceleration
+     call force_fine(ilevel,icount)
+
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
      ! Synchronize remaining particles for gravity
      if(pic)then
