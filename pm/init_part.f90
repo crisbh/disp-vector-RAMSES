@@ -1085,6 +1085,9 @@ subroutine load_gadget
   integer::clock_start,clock_end,clock_rate
   real(dp)::gadgetvfact
 
+  ! Grid size
+  real(dp)::gridN
+
   ! Local particle count
   ipart=0
   call SYSTEM_CLOCK(COUNT_RATE=clock_rate)
@@ -1117,9 +1120,39 @@ subroutine load_gadget
         start = 1
         TIME_START(clock_start)
         do i=1,nparticles
-           xx_dp(1,1) = pos(1,i)/gadgetheader%boxsize
-           xx_dp(1,2) = pos(2,i)/gadgetheader%boxsize
-           xx_dp(1,3) = pos(3,i)/gadgetheader%boxsize
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+           !!!!!!!!!!!!!!!!!!!! Reset the particles back to a regular configuration !!!!!!!!!!!!!!!!!
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+           ! Set domain grid size, which is equal to the number of particles
+           gridN=nparticles
+
+           pos(1,i) = pos(1,i)+0.5D0*gadgetheader%boxsize/gridN
+           pos(2,i) = pos(2,i)+0.5D0*gadgetheader%boxsize/gridN
+           pos(3,i) = pos(3,i)+0.5D0*gadgetheader%boxsize/gridN
+           if(pos(1,i).gt.box_test) pos(1,i)=pos(1,i)-gadgetheader%boxsize
+           if(pos(2,i).gt.box_test) pos(2,i)=pos(2,i)-gadgetheader%boxsize
+           if(pos(3,i).gt.box_test) pos(3,i)=pos(3,i)-gadgetheader%boxsize
+
+           ! Option 1: Set all particles at the cell centers
+!           xx_dp(1,1) = (DBLE(NINT(pos(1,i)/(gadgetheader%boxsize/256.0d0)+0.5D0))-0.5d0)/256.0d0!
+!           xx_dp(1,2) = (DBLE(NINT(pos(2,i)/(gadgetheader%boxsize/256.0d0)+0.5D0))-0.5d0)/256.0d0!
+!           xx_dp(1,3) = (DBLE(NINT(pos(3,i)/(gadgetheader%boxsize/256.0d0)+0.5D0))-0.5d0)/256.0d0!
+
+           ! Option 2: Set all particles at the cell BOUNDARIES
+           xx_dp(1,1) = (DBLE(NINT(pos(1,i)/(gadgetheader%boxsize/gridN)+0.5D0))-1.0D-7)/gridN!
+           xx_dp(1,2) = (DBLE(NINT(pos(2,i)/(gadgetheader%boxsize/gridN)+0.5D0))-1.0D-7)/gridN!
+           xx_dp(1,3) = (DBLE(NINT(pos(3,i)/(gadgetheader%boxsize/gridN)+0.5D0))-1.0D-7)/gridN!
+
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!           ! Default values
+!           xx_dp(1,1) = pos(1,i)/gadgetheader%boxsize
+!           xx_dp(1,2) = pos(2,i)/gadgetheader%boxsize
+!           xx_dp(1,3) = pos(3,i)/gadgetheader%boxsize
+
 #ifndef WITHOUTMPI
            call cmp_cpumap(xx_dp,cc,1)
            if(cc(1)==myid)then
@@ -1132,9 +1165,19 @@ subroutine load_gadget
               end if
 #endif
               xp(ipart,1:3)=xx_dp(1,1:3)
-              vp(ipart,1)  =vel(1, i) * gadgetvfact
-              vp(ipart,2)  =vel(2, i) * gadgetvfact
-              vp(ipart,3)  =vel(3, i) * gadgetvfact
+
+              ! Set Initial velocities values directly
+              ! We shall input the u_x (lower index) component. Then, we can suppress the IC GRAMSES "correction"
+              ! Do not forget to use code units!
+              vp(ipart,1)  = 0.0D0
+              vp(ipart,2)  = 0.0D0
+              vp(ipart,3)  = 0.0D0
+
+
+!              ! Default values (gagdet-format IC files)
+!              vp(ipart,1)  =vel(1, i) * gadgetvfact
+!              vp(ipart,2)  =vel(2, i) * gadgetvfact
+!              vp(ipart,3)  =vel(3, i) * gadgetvfact
               mp(ipart)    = massparticles
               levelp(ipart)=levelmin
               idp(ipart)   =ids(i)
